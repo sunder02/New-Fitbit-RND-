@@ -1,0 +1,979 @@
+//
+//  AppDelegate.h
+//  CoreData
+//
+//  Created by krapendra on 11/19/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+#import <CoreData/CoreData.h>
+#import "ViewController.h"
+
+@interface AppDelegate : UIResponder <UIApplicationDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
+@property (strong, nonatomic) ViewController *viewController;
+@property (nonatomic, retain) UINavigationController *navController;
+
+
+@property (readonly, strong, nonatomic) NSManagedObjectContext *managedObjectContext;
+@property (readonly, strong, nonatomic) NSManagedObjectModel *managedObjectModel;
+@property (readonly, strong, nonatomic) NSPersistentStoreCoordinator *persistentStoreCoordinator;
+
+- (void)saveContext;
+- (NSURL *)applicationDocumentsDirectory;
+
+
+@end
+
+//
+//  AppDelegate.m
+//  CoreData
+//
+//  Created by krapendra on 11/19/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import "AppDelegate.h"
+
+@interface AppDelegate ()
+
+@end
+
+@implementation AppDelegate
+
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    ViewController *viewCtr;
+    viewCtr = [[ViewController alloc]
+               initWithNibName:nil
+               bundle:nil];
+    
+    self.viewController = viewCtr;
+    
+    self.navController = [[UINavigationController alloc]
+                          initWithRootViewController:viewCtr];
+    self.navController.navigationBarHidden = NO;
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] ;
+    self.window.rootViewController = self.navController;
+    [self.window makeKeyAndVisible];
+    return YES;
+}
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+    // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+    // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
+    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+    // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    // Saves changes in the application's managed object context before the application terminates.
+    [self saveContext];
+}
+
+#pragma mark - Core Data stack
+
+@synthesize managedObjectContext = _managedObjectContext;
+@synthesize managedObjectModel = _managedObjectModel;
+@synthesize persistentStoreCoordinator = _persistentStoreCoordinator;
+
+- (NSURL *)applicationDocumentsDirectory {
+    // The directory the application uses to store the Core Data store file. This code uses a directory named "testp.CoreData" in the application's documents directory.
+    return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+}
+
+- (NSManagedObjectModel *)managedObjectModel {
+    // The managed object model for the application. It is a fatal error for the application not to be able to find and load its model.
+    if (_managedObjectModel != nil) {
+        return _managedObjectModel;
+    }
+    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:@"CoreData" withExtension:@"momd"];
+    _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
+    return _managedObjectModel;
+}
+
+- (NSPersistentStoreCoordinator *)persistentStoreCoordinator {
+    // The persistent store coordinator for the application. This implementation creates and return a coordinator, having added the store for the application to it.
+    if (_persistentStoreCoordinator != nil) {
+        return _persistentStoreCoordinator;
+    }
+    
+    // Create the coordinator and store
+    
+    _persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
+    NSURL *storeURL = [[self applicationDocumentsDirectory] URLByAppendingPathComponent:@"CoreData.sqlite"];
+    NSError *error = nil;
+    NSString *failureReason = @"There was an error creating or loading the application's saved data.";
+    if (![_persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:nil error:&error]) {
+        // Report any error we got.
+        NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+        dict[NSLocalizedDescriptionKey] = @"Failed to initialize the application's saved data";
+        dict[NSLocalizedFailureReasonErrorKey] = failureReason;
+        dict[NSUnderlyingErrorKey] = error;
+        error = [NSError errorWithDomain:@"YOUR_ERROR_DOMAIN" code:9999 userInfo:dict];
+        // Replace this with code to handle the error appropriately.
+        // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+        NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+        abort();
+    }
+    
+    return _persistentStoreCoordinator;
+}
+
+
+- (NSManagedObjectContext *)managedObjectContext {
+    // Returns the managed object context for the application (which is already bound to the persistent store coordinator for the application.)
+    if (_managedObjectContext != nil) {
+        return _managedObjectContext;
+    }
+    
+    NSPersistentStoreCoordinator *coordinator = [self persistentStoreCoordinator];
+    if (!coordinator) {
+        return nil;
+    }
+    _managedObjectContext = [[NSManagedObjectContext alloc] init];
+    [_managedObjectContext setPersistentStoreCoordinator:coordinator];
+    return _managedObjectContext;
+}
+
+#pragma mark - Core Data Saving support
+
+- (void)saveContext {
+    NSManagedObjectContext *managedObjectContext = self.managedObjectContext;
+    if (managedObjectContext != nil) {
+        NSError *error = nil;
+        if ([managedObjectContext hasChanges] && ![managedObjectContext save:&error]) {
+            // Replace this implementation with code to handle the error appropriately.
+            // abort() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+            NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+            abort();
+        }
+    }
+}
+
+@end
+//
+//  ViewController.h
+//  CoreData
+//
+//  Created by krapendra on 11/19/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface ViewController : UIViewController
+@property (strong, nonatomic) IBOutlet UITextField *name;
+@property (strong, nonatomic) IBOutlet UITextField *address;
+@property (strong, nonatomic) IBOutlet UITextField *mobile;
+@end
+
+//
+//  ViewController.m
+//  CoreData
+//
+//  Created by krapendra on 11/19/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import "ViewController.h"
+#import "AppDelegate.h"
+#import "SavedDataTableView.h"
+#import "SeeSQLTable.h"
+
+@interface ViewController ()
+{
+    UIButton *submit;
+    UIButton *SeeRecord;
+    UIButton *SeeTable;
+    NSString *userName;
+}
+
+@end
+
+@implementation ViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor=[UIColor whiteColor];
+    
+    UILabel *labelName=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 100, self.view.frame.size.width/3, 30)];
+    labelName.text=@"Name:";
+    [self.view addSubview:labelName];
+    
+    UILabel *labelAdd=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 150, self.view.frame.size.width/3, 30)];
+    labelAdd.text=@"Address:";
+    [self.view addSubview:labelAdd];
+    
+    UILabel *labelMob=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 200, self.view.frame.size.width/3, 30)];
+    labelMob.text=@"Mobile No.:";
+    [self.view addSubview:labelMob];
+    
+    _name= [[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3),100,self.view.frame.size.width/3, 30)];
+    _name.placeholder= @"Enter Name";
+    _name.backgroundColor=[UIColor whiteColor];
+    _name.layer.borderWidth=2;
+    _name.layer.cornerRadius=5;
+    _name.textAlignment=NSTextAlignmentCenter;
+    [self.view  addSubview:_name];
+    
+    _address= [[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3),150,self.view.frame.size.width/3, 30)];
+    _address.placeholder= @"Enter Address";
+    _address.backgroundColor=[UIColor whiteColor];
+    _address.layer.borderWidth=2;
+    _address.layer.cornerRadius=5;
+    _address.textAlignment=NSTextAlignmentCenter;
+    [self.view  addSubview:_address];
+    
+    _mobile= [[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3),200,self.view.frame.size.width/3, 30)];
+    _mobile.placeholder= @"Enter Mobile";
+    _mobile.backgroundColor=[UIColor whiteColor];
+    _mobile.layer.borderWidth=2;
+    _mobile.layer.cornerRadius=5;
+    _mobile.textAlignment=NSTextAlignmentCenter;
+    [self.view  addSubview:_mobile];
+    
+    submit =[[UIButton alloc]initWithFrame:CGRectMake((self.view.frame.size.width-150)/2,270,150, 30)];
+    submit .backgroundColor =[UIColor lightGrayColor];
+    [submit addTarget:self action:@selector(saveData) forControlEvents:UIControlEventTouchUpInside];
+    [submit setTitle:@"Submit" forState:UIControlStateNormal];
+    submit.layer.cornerRadius=5;
+    [self.view  addSubview:submit];
+    
+    SeeRecord =[[UIButton alloc]initWithFrame:CGRectMake((self.view.frame.size.width-150)/2,320,150, 30)];
+    SeeRecord .backgroundColor =[UIColor lightGrayColor];
+    [SeeRecord setTitle:@"See Record" forState:UIControlStateNormal];
+    [SeeRecord addTarget:self action:@selector(SeeRecord_Click) forControlEvents:UIControlEventTouchUpInside];
+    SeeRecord.layer.cornerRadius=5;
+    [self.view  addSubview:SeeRecord];
+    
+    SeeTable =[[UIButton alloc]initWithFrame:CGRectMake((self.view.frame.size.width-150)/2,370,150, 30)];
+    SeeTable .backgroundColor =[UIColor lightGrayColor];
+    [SeeTable setTitle:@"SeeTable" forState:UIControlStateNormal];
+    [SeeTable addTarget:self action:@selector(SeeTable_Click) forControlEvents:UIControlEventTouchUpInside];
+    SeeTable.layer.cornerRadius=5;
+    [self.view  addSubview:SeeTable];
+}
+
+
+-(void)GetData
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    
+    NSPredicate *pred =[NSPredicate predicateWithFormat:@"(userName MATCHES[C] %@)", _name.text];
+    [request setPredicate:pred];
+    
+    NSManagedObject *matches = nil;
+    
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    
+    if ([objects count] == 0)
+    {
+        NSLog(@"No User Name Matches..");
+    }
+    else
+    {
+        matches = objects[0];
+        userName=[matches valueForKey:@"userName"];
+    }
+}
+
+
+-(void)saveData
+{
+    
+    if ([_name.text isEqualToString:@""])
+    {
+        UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Name can't be Blank!" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+        return  [myAlertView show];
+    }
+    else
+    {
+        [self GetData];
+        if (userName)
+        {
+            userName=nil;
+            UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"User Name allready Exist!" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            return  [myAlertView show];
+        }
+        else
+        {
+            AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+            NSManagedObjectContext *context =[appDelegate managedObjectContext];
+            NSManagedObject *newContact;
+            newContact = [NSEntityDescription insertNewObjectForEntityForName:@"UserData" inManagedObjectContext:context];
+            
+            [newContact setValue: _name.text forKey:@"userName"];
+            [newContact setValue: _address.text forKey:@"userAdd"];
+            [newContact setValue: _mobile.text forKey:@"userMob"];
+            
+            NSError *error;
+            [context save:&error];
+            
+            _name.text=@"";
+            _address.text=@"";
+            _mobile.text=@"";
+            
+            UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Record Saved Successfully!" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+            return  [myAlertView show];
+        }
+    }
+}
+
+-(void)SeeRecord_Click
+{
+    SavedDataTableView *savedatatableviewOBJ=[[SavedDataTableView alloc]init];
+    [self.navigationController pushViewController:savedatatableviewOBJ animated:YES];
+}
+
+-(void)SeeTable_Click
+{
+    SeeSQLTable *seesqltableOBJ=[[SeeSQLTable alloc]init];
+    [self.navigationController pushViewController:seesqltableOBJ animated:YES];
+}
+
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    [self.view endEditing:YES];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+}
+
+@end
+//
+//  SavedDataTableView.h
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface SavedDataTableView : UIViewController<UITableViewDataSource, UITableViewDelegate>
+
+
+@end
+//
+//  SavedDataTableView.m
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import "SavedDataTableView.h"
+#import "AppDelegate.h"
+#import "ShowFullDetails.h"
+
+@interface SavedDataTableView ()
+{
+    UITableView *mytableview;
+    NSMutableArray *SavedData;
+    NSString *UserName;
+}
+
+@end
+
+@implementation SavedDataTableView
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    self.view.backgroundColor=[UIColor whiteColor];
+    
+    [self getdata];
+    
+    mytableview = [[UITableView alloc] initWithFrame:CGRectMake(0,0,self.view.frame.size.width,self.view.frame.size.height) style:UITableViewStylePlain];
+    mytableview.delegate = self;
+    mytableview.dataSource = self;
+    mytableview.backgroundColor = [UIColor whiteColor];
+    [self.view addSubview:mytableview];
+}
+
+
+#pragma mark - UITableViewDataSource
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)theTableView
+{
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)theTableView numberOfRowsInSection:(NSInteger)section
+{
+    return SavedData.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)theTableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellIdentifier = @"HistoryCell";
+    
+    UITableViewCell *cell = (UITableViewCell *)[theTableView dequeueReusableCellWithIdentifier:cellIdentifier];
+    if (cell == nil)
+    {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+        
+        cell.accessoryType =  UITableViewCellAccessoryDisclosureIndicator;
+        mytableview.separatorColor = [UIColor clearColor];
+
+        UIButton *customButton= [[UIButton alloc]initWithFrame:CGRectMake(cell.contentView.frame.size.width-30, (cell.contentView.frame.size.height-30)/2, 30, 30)];;
+        [customButton addTarget:self action:@selector(delete:) forControlEvents: UIControlEventTouchUpInside];
+        [customButton setImage:[UIImage imageNamed:@"cancel.png"] forState:normal];
+        [customButton setTag:indexPath.row];
+        [cell.contentView addSubview:customButton];
+        
+        UIButton *updateButton = [[UIButton alloc]initWithFrame:CGRectMake(cell.contentView.frame.size.width-100, (cell.contentView.frame.size.height-20)/2, 45, 20)];;
+        [updateButton addTarget:self action:@selector(update:) forControlEvents: UIControlEventTouchUpInside];
+        [updateButton setTag:indexPath.row];
+        [cell.contentView addSubview:updateButton];
+        updateButton.layer.borderWidth=1;
+        updateButton.layer.cornerRadius=5;
+        updateButton.backgroundColor=[UIColor whiteColor];
+        UILabel *btnlbl=[[UILabel alloc]initWithFrame:CGRectMake(0, 0, 45, 20)];
+        btnlbl.text=@"Update";
+        btnlbl.textAlignment=NSTextAlignmentCenter;
+        btnlbl.font=[UIFont fontWithName:@"arial" size:12];
+        [updateButton addSubview:btnlbl];
+    }
+    
+    cell.textLabel.text = [SavedData objectAtIndex:indexPath.row];
+    cell.imageView.image = [UIImage imageNamed:@"3.jpg"];
+    
+    if (indexPath.row%2==0) {
+            cell.backgroundColor=[UIColor colorWithRed:0 green:0 blue:0 alpha:0.2];
+    }
+    else
+    {
+        cell.backgroundColor=[UIColor colorWithRed:0 green:0 blue:0 alpha:0.1];
+
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    //Do something here on row select...
+}
+
+
+-(void)getdata
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    if ([objects count] == 0)
+    {
+        NSLog(@"No Record Found");
+        [SavedData removeAllObjects];
+    }
+    else
+    {
+        SavedData=[[NSMutableArray alloc]init];
+        for (int i=0; i<[objects count]; i++)
+        {
+            matches = objects[i];
+            UserName = [matches valueForKey:@"userName"];
+            [SavedData addObject:UserName];
+        }
+    }
+}
+
+
+-(void)delete:(UIButton *)sender
+{
+    NSInteger row =[sender tag];
+    NSString *user_name=[SavedData objectAtIndex:row];
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSPredicate *pred =[NSPredicate predicateWithFormat:@"(userName = %@)",user_name];
+    [request setPredicate:pred];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    if([objects count] == 0)
+    {
+        NSLog(@"No Match Found");
+    }
+    else
+    {
+        matches=objects[0];
+        [context deleteObject:matches];
+        [context save:nil];
+
+        [self getdata];
+        [mytableview reloadData];
+        
+        UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Record Deleted Successsfully" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+        return  [myAlertView show];
+    }
+}
+
+-(void)update:(UIButton *)sender
+{
+    NSInteger row =[sender tag];
+    ShowFullDetails *showdetailsObj=[[ShowFullDetails alloc]init];
+    [self.navigationController pushViewController:showdetailsObj animated:YES];
+    [showdetailsObj MyView1 :[SavedData objectAtIndex:row]];
+}
+
+-(void)viewWillAppear:(BOOL)animated
+{
+    [self getdata];
+    [mytableview reloadData];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+}
+
+@end
+//
+//  ShowFullDetails.h
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface ShowFullDetails : UIViewController
+-(void)MyView1 :(NSString *)myName;
+@end
+//
+//  ShowFullDetails.m
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import "ShowFullDetails.h"
+#import "AppDelegate.h"
+#import "SavedDataTableView.h"
+
+@interface ShowFullDetails ()
+{
+    NSString *name;
+    NSMutableArray *SavedData;
+    
+    UITextField *username;
+    UITextField *add;
+    UITextField *mob;
+ 
+    UIButton *deletebtn;
+    UIButton *updatebtn;
+}
+
+@end
+
+@implementation ShowFullDetails
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor=[UIColor whiteColor];
+    
+    UILabel *labelName=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 150, self.view.frame.size.width/3, 30)];
+    labelName.text=@"Name:";
+    [self.view addSubview:labelName];
+    
+    UILabel *labelAdd=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 200, self.view.frame.size.width/3, 30)];
+    labelAdd.text=@"Address:";
+    [self.view addSubview:labelAdd];
+    
+    UILabel *labelMob=[[UILabel alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3)/3, 250, self.view.frame.size.width/3, 30)];
+    labelMob.text=@"Mobile No.:";
+    [self.view addSubview:labelMob];
+    
+    username=[[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3), 150, self.view.frame.size.width/3, 30)];
+    [self.view addSubview:username];
+    username.layer.borderWidth=1;
+    username.textAlignment=NSTextAlignmentCenter;
+    username.layer.cornerRadius=5;
+    
+    add=[[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3), 200, self.view.frame.size.width/3, 30)];
+    [self.view addSubview:add];
+    add.layer.borderWidth=1;
+    add.textAlignment=NSTextAlignmentCenter;
+    add.layer.cornerRadius=5;
+    
+    mob=[[UITextField alloc]initWithFrame:CGRectMake(labelName.frame.origin.x+(self.view.frame.size.width/3), 250, self.view.frame.size.width/3, 30)];
+    [self.view addSubview:mob];
+    mob.layer.borderWidth=1;
+    mob.textAlignment=NSTextAlignmentCenter;
+    mob.layer.cornerRadius=5;
+    
+    updatebtn=[[UIButton alloc]initWithFrame:CGRectMake(75, 300, 200, 30)];
+    updatebtn.backgroundColor=[UIColor lightGrayColor];
+    [updatebtn setTitle:@"Update" forState:normal];
+    [self.view addSubview:updatebtn];
+    [updatebtn addTarget:self action:@selector(update_click) forControlEvents:UIControlEventTouchUpInside];
+    updatebtn.layer.cornerRadius=5;
+    
+    deletebtn=[[UIButton alloc]initWithFrame:CGRectMake(75, 350, 200, 30)];
+    deletebtn.backgroundColor=[UIColor lightGrayColor];
+    [deletebtn setTitle:@"Delete This Record" forState:normal];
+    [self.view addSubview:deletebtn];
+    [deletebtn addTarget:self action:@selector(delete_click) forControlEvents:UIControlEventTouchUpInside];
+    deletebtn.layer.cornerRadius=5;
+
+     [self getdata];
+}
+
+-(void)update_click
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSPredicate *pred =[NSPredicate predicateWithFormat:@"(userName = %@)", name];
+    [request setPredicate:pred];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    if ([objects count] == 0)
+    {
+        NSLog(@"No Fecord Found");
+    }
+    else
+    {
+        matches = objects[0];
+        [matches setValue:username.text forKey:@"userName"];
+        [matches setValue:add.text forKey:@"userAdd"];
+        [matches setValue:mob.text forKey:@"userMob"];
+        [context save:nil];
+        
+        UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Record Updated Successsfully" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+        
+        [self.navigationController popViewControllerAnimated:YES];
+        return  [myAlertView show];
+    }
+}
+
+-(void)delete_click
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSPredicate *pred =[NSPredicate predicateWithFormat:@"(userName = %@)", name];
+    [request setPredicate:pred];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+   
+    if([objects count] == 0)
+    {
+        NSLog(@"No Match Found");
+    }
+    else
+    {
+        matches=objects[0];
+        [context deleteObject:matches];
+        [context save:nil];
+        [self.navigationController popViewControllerAnimated:YES];
+        UIAlertView *myAlertView = [[UIAlertView alloc] initWithTitle:@"Error" message:@"Record Deleted Successsfully" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
+        return  [myAlertView show];
+       
+    }
+}
+
+-(void)MyView1 :(NSString *)myName
+{
+    name=myName;
+}
+
+-(void)getdata
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSPredicate *pred =[NSPredicate predicateWithFormat:@"(userName = %@)",name];
+    [request setPredicate:pred];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    if ([objects count] == 0)
+    {
+        NSLog(@"No Fecord Found");
+    }
+    else
+    {
+        matches = objects[0];
+        username.text=[matches valueForKey:@"userName"];
+        add.text=[matches valueForKey:@"userAdd"];
+        mob.text=[matches valueForKey:@"userMob"];
+    }
+}
+
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+}
+
+@end
+//
+//  SeeSQLTable.h
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <UIKit/UIKit.h>
+
+
+@interface SeeSQLTable : UIViewController<UICollectionViewDelegate,UICollectionViewDataSource>
+
+
+
+@end
+//
+//  SeeSQLTable.m
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+
+
+#import "SeeSQLTable.h"
+#import "AppDelegate.h"
+#import "nsobject.h"
+
+
+@interface SeeSQLTable ()
+{
+    nsobject *nsObj;
+    NSMutableArray *RecordArray;
+    NSMutableArray *DisplayArray;
+    NSString *str;
+    UILabel *lblName1;
+    
+    UICollectionView* collectionview;
+    UICollectionViewFlowLayout *layout;
+}
+
+@end
+
+@implementation SeeSQLTable
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    
+    
+    
+    self.view.backgroundColor=[UIColor whiteColor];
+    
+    [self getdata];
+    
+    DisplayArray=[[NSMutableArray alloc]init];
+    for (int i=0; i<RecordArray.count; i++)
+    {
+        nsObj = [[nsobject alloc]init];
+        nsObj=[RecordArray objectAtIndex:i];
+        
+        str=nsObj.tablename;
+        [DisplayArray addObject:str];
+        str=nsObj.tableadd;
+        [DisplayArray addObject:str];
+        str=nsObj.tablemob;
+        [DisplayArray addObject:str];
+    }
+   
+    UIView *header=[[UIView alloc]initWithFrame:CGRectMake(0, 64, self.view.frame.size.width, 40)];
+    [self.view addSubview:header];
+    header.backgroundColor=[UIColor grayColor];
+    
+    UIView *headerBottom=[[UIView alloc]initWithFrame:CGRectMake(0,header.frame.size.height-4, self.view.frame.size.width, 4)];
+    [header addSubview:headerBottom];
+    headerBottom.backgroundColor=[UIColor redColor];
+    
+    UILabel *lblName=[[UILabel alloc]initWithFrame:CGRectMake(0, 0, header.frame.size.width/3, header.frame.size.height)];
+    lblName.text=@"   Name";
+    lblName.textColor=[UIColor redColor];
+    [header addSubview:lblName];
+    
+    UILabel *lblAdd=[[UILabel alloc]initWithFrame:CGRectMake(header.frame.size.width/3, 0, header.frame.size.width/3, header.frame.size.height)];
+    lblAdd.text=@"  Address";
+    [header addSubview:lblAdd];
+    lblAdd.textColor=[UIColor redColor];
+    
+    UILabel *lblMob=[[UILabel alloc]initWithFrame:CGRectMake((header.frame.size.width/3)*2, 0, header.frame.size.width/3, header.frame.size.height)];
+    lblMob.text=@"   Mobile No.";
+    [header addSubview:lblMob];
+    lblMob.textColor=[UIColor redColor];;
+    
+    layout=[[UICollectionViewFlowLayout alloc] init];
+    layout.minimumLineSpacing=0;
+    layout.minimumInteritemSpacing=0;
+    layout.sectionInset= UIEdgeInsetsMake(0, 0, 0, 0);
+    
+    collectionview=[[UICollectionView alloc] initWithFrame:CGRectMake(0,104,self.view.frame.size.width,self.view.frame.size.height-104) collectionViewLayout:layout];
+    [collectionview setDataSource:self];
+    [collectionview setDelegate:self];
+    collectionview.allowsMultipleSelection = YES;
+    [collectionview registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:@"cellIdentifier"];
+    [collectionview setBackgroundColor:[UIColor whiteColor]];
+    [self.view addSubview:collectionview];
+    
+    
+    UIView *view1=[[UIView alloc]initWithFrame:CGRectMake((self.view.frame.size.width/3),104,1,self.view.frame.size.height)];
+    [self.view addSubview:view1];
+    view1.backgroundColor=[UIColor grayColor];
+    
+    UIView *view2=[[UIView alloc]initWithFrame:CGRectMake(((self.view.frame.size.width/3)*2),104,1, self.view.frame.size.height)];
+    [self.view addSubview:view2];
+    view2.backgroundColor=[UIColor grayColor];
+}
+
+- (NSInteger)collectionView:(UICollectionView *)view numberOfItemsInSection:(NSInteger)section
+{
+    return 3;
+}
+
+- (NSInteger)numberOfSectionsInCollectionView: (UICollectionView *)collectionView {
+    return (DisplayArray.count)/3;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    UICollectionViewCell *cell=[collectionView dequeueReusableCellWithReuseIdentifier:@"cellIdentifier" forIndexPath:indexPath];
+
+    lblName1=[[UILabel alloc]initWithFrame:CGRectMake(10, 0,(int)((self.view.frame.size.width/3)-10), 30)];
+    [cell.contentView addSubview:lblName1];
+    lblName1.tag=99;
+    lblName1.backgroundColor=[UIColor clearColor];
+    
+    UILabel *lblName2 = (UILabel *)[cell viewWithTag:99];
+    lblName2.text=[DisplayArray objectAtIndex:indexPath.row + (indexPath.section *3)];
+    
+    if (indexPath.section%2==0)
+    {
+        cell.backgroundColor=[UIColor colorWithRed:0 green:0 blue:0 alpha:0.1];
+    }
+    else
+    {
+        cell.backgroundColor=[UIColor clearColor];
+    }
+
+    return cell;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+}
+
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    return CGSizeMake((self.view.frame.size.width/3) , 30);
+}
+
+-(void)getdata
+{
+    AppDelegate *appDelegate =[[UIApplication sharedApplication] delegate];
+    NSManagedObjectContext *context =[appDelegate managedObjectContext];
+    NSEntityDescription *entityDesc =[NSEntityDescription entityForName:@"UserData" inManagedObjectContext:context];
+    NSFetchRequest *request = [[NSFetchRequest alloc] init];
+    [request setEntity:entityDesc];
+    NSManagedObject *matches = nil;
+    NSError *error;
+    NSArray *objects = [context executeFetchRequest:request error:&error];
+    if ([objects count] == 0)
+    {
+        NSLog(@"No Fecord Found");
+    }
+    else
+    {
+        RecordArray=[[NSMutableArray alloc]init];
+        for (int i=0; i<[objects count]; i++)
+        {
+            matches = objects[i];
+            nsObj=[[nsobject alloc]init];
+            nsObj.tablename=[matches valueForKey:@"userName"];
+            nsObj.tableadd=[matches valueForKey:@"userAdd"];
+            nsObj.tablemob=[matches valueForKey:@"userMob"];
+            [RecordArray addObject:nsObj];
+        }
+    }
+}
+
+-(void)viewWillAppear:(BOOL)animated{
+    [collectionview registerNib:[UINib nibWithNibName:@"CustomCell" bundle:[NSBundle mainBundle]]
+        forCellWithReuseIdentifier:@"CustomCell"];
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+}
+
+@end
+//
+//  nsobject.h
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+@interface nsobject : NSObject
+@property(nonatomic, strong) NSString *tablename;
+@property(nonatomic, strong) NSString *tableadd;
+@property(nonatomic, strong) NSString *tablemob;
+@end
+//
+//  nsobject.m
+//  SQL Lite
+//
+//  Created by krapendra on 11/18/15.
+//  Copyright (c) 2015 migitalmac. All rights reserved.
+//
+
+#import "nsobject.h"
+
+@implementation nsobject
+
+@end
