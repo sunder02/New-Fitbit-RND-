@@ -1,0 +1,174 @@
+Conversation with Sunder @ Mountain Man on Wed Jan 27 18:48:20 2016:
+(18:48:21) Sunder @ Mountain Man: //
+//  MainViewController.m
+//  TechnoGerms.com
+//
+//  Created by Ammad iOS on 04/10/2013.
+//  Copyright (c) 2013 TechnoGerms. All rights reserved.
+//
+
+#import "MainViewController.h"
+#import "JSON.h"
+
+NSString *client_id = @"227DZH";;
+NSString *secret = @"3a6b0c3657193040c86b30e7983ef42b";
+NSString *callbakc =  @"https://www.google.com";
+NSString *scope = @"activity+nutrition";
+
+//NSString *visibleactions = @"http://schemas.google.com/AddActivity";
+
+
+@interface MainViewController ()
+{
+    NSString *url;
+}
+
+@end
+
+@implementation MainViewController
+@synthesize webview,isLogin,isReader;
+
+
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+
+
+    url= [NSString stringWithFormat:@"https://www.fitbit.com/oauth2/authorize?response_type=token&client_id=%@&redirect_uri=%@&scope=%@&expires_in=604800",client_id,callbakc,scope];
+    // [indicator startAnimating];
+   // [self authSMethod];
+    [self accessTokenS];
+}
+
+-(void)authSMethod
+ {
+     //[webview loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:url]];
+     [request setHTTPMethod:@"POST"];
+     NSURLConnection *theConnection=[[NSURLConnection alloc] initWithRequest:request delegate:self];
+     receivedData = [[NSMutableData alloc] init];
+ }
+
+
+-(void)accessTokenS
+{
+    /*
+     //////////////////////////////////
+     Y2xpZW50X2lkOmNsaWVudCBzZWNyZXQ=, is decoded as "client_id:client secret"
+     ///////////////////////////////////////
+     POST https://api.fitbit.com/oauth2/token
+     
+     Authorization: Basic Y2xpZW50X2lkOmNsaWVudCBzZWNyZXQ=
+     Content-Type: application/x-www-form-urlencoded
+     client_id=22942C&grant_type=authorization_code&redirect_uri=http%3A%2F%2Fexample.com%2Fcallback&code=1234567890
+     */
+    
+    NSString *urltoken = [NSString stringWithFormat:@"https://api.fitbit.com/oauth2/token"];
+    NSMutableURLRequest *request=[[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:urltoken]];
+    NSData *plainData = [[NSString stringWithFormat:@"%@:%@", client_id,secret] dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *base64String = [plainData base64EncodedStringWithOptions:kNilOptions];
+    [request setValue:[NSString stringWithFormat:@"Basic %@",base64String] forHTTPHeaderField:@"Authorization"];
+    
+    NSString *contentType = [NSString stringWithFormat:@"application/x-www-form-urlencoded"];
+    [request setValue:contentType forHTTPHeaderField:@"Content-Type"];
+    NSString *data = [NSString stringWithFormat:@"client_id=%@&redirect_uri=%@&grant_type=authorization_code&token=1234567890",client_id,callbakc];
+    [request setHTTPBody:[data dataUsingEncoding:NSUTF8StringEncoding]];
+    NSURLConnection *theConnection=[[NSURLConnection alloc]initWithRequest:request delegate:self];
+    receivedData = [[NSMutableData alloc] init];
+}
+
+
+
+//- (BOOL)webView:(UIWebView*)webView shouldStartLoadWithRequest:(NSURLRequest*)request navigationType:(UIWebViewNavigationType)navigationType
+//{
+//    //    [indicator startAnimating];
+//    if ([[[request URL] host] isEqualToString:@"www.fitbit.com"]) {
+//        
+//        // Extract oauth_verifier from URL query
+//        NSString* verifier = nil;
+//        NSArray* urlParams = [[[request URL] query] componentsSeparatedByString:@"&"];
+//        for (NSString* param in urlParams) {
+//            NSArray* keyValue = [param componentsSeparatedByString:@"="];
+//            NSString* key = [keyValue objectAtIndex:0];
+//            if ([key isEqualToString:@"response_type"])  //1234567890
+//            {
+//                verifier = [keyValue objectAtIndex:0];
+//                NSLog(@"verifier %@",verifier);
+//                break;
+//            }
+//        }
+//       
+//        [self accessTokenS];
+//       
+//        if (verifier)
+//        {
+//            NSString *data = [NSString stringWithFormat:@"client_id=%@&client_secret=%@&redirect_uri=%@&grant_type=authorization_code",client_id,secret,callbakc];
+//            
+//            NSString *url = [NSString stringWithFormat:@"https://api.fitbit.com/oauth2/token"];
+//            NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:url]];
+//            [request setHTTPMethod:@"POST"];
+//            [request setHTTPBody:[data dataUsingEncoding:NSUTF8StringEncoding]];
+//            NSURLConnection *theConnection=[[NSURLConnection alloc]initWithRequest:request delegate:self];
+//            receivedData = [[NSMutableData alloc] init];
+//        }
+//        else
+//        {
+//            // ERROR!
+//        }
+//        
+//       // [webView removeFromSuperview];
+//        
+//        return NO;
+//    }
+//    return YES;
+//}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+{
+    [receivedData appendData:data];
+    NSLog(@"verifier %@",receivedData);
+}
+
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error{
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Error"
+                                                    message:[NSString stringWithFormat:@"%@", error]
+                                                   delegate:nil
+                                          cancelButtonTitle:@"OK"
+                                          otherButtonTitles:nil];
+    [alert show];
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection
+{
+    
+    [webview loadData:receivedData MIMEType: @"text/html" textEncodingName: @"UTF-8" baseURL:nil];
+    
+    NSString *response = [[NSString alloc] initWithData:receivedData encoding:NSUTF8StringEncoding];
+    SBJsonParser *jResponse = [[SBJsonParser alloc]init];
+    NSDictionary *tokenData = [jResponse objectWithString:response];
+    
+    
+    //  WebServiceSocket *dconnection = [[WebServiceSocket alloc] init];
+    //   dconnection.delegate = self;
+    
+  /*  NSString *pdata = [NSString stringWithFormat:@"type=3&token=%@&secret=123&login=%@", [tokenData objectForKey:@"refresh_token"], self.isLogin];
+    //  NSString *pdata = [NSString stringWithFormat:@"type=3&token=%@&secret=123&login=%@",[tokenData accessToken.secret,self.isLogin];
+    //  [dconnection fetch:1 withPostdata:pdata withGetData:@"" isSilent:NO];
+   
+    
+    UIAlertView *alertView = [[UIAlertView alloc]
+                              initWithTitle:@"Google Access TOken"
+                              message:pdata
+                              delegate:nil
+                              cancelButtonTitle:@"OK"
+                              otherButtonTitles:nil];
+    [alertView show];*/
+}
+
+
+
+@end
+
+---
+
